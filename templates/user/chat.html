@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+{% block title %}Chat – ConversationAI{% endblock %}
+{% block page_title %}AI Chat{% endblock %}
+{% block nav_chat %}active{% endblock %}
+
+{% block content %}
+<div class="row g-4" style="height:calc(100vh - 130px)">
+
+  <!-- Sidebar: Conversation list -->
+  <div class="col-md-3 d-flex flex-column" style="height:100%">
+    <div class="card h-100 d-flex flex-column">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">Conversations</span>
+        <button class="btn btn-sm btn-primary" id="new-conv-btn" data-bs-toggle="modal" data-bs-target="#newConvModal">
+          <i class="bi bi-plus"></i>
+        </button>
+      </div>
+      <div class="card-body p-0 overflow-auto flex-grow-1">
+        <div id="conv-sidebar-list">
+          <div class="p-3 text-center text-muted small">
+            <div class="spinner-border spinner-border-sm"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main chat area -->
+  <div class="col-md-9 d-flex flex-column" style="height:100%">
+    <!-- No conversation selected -->
+    <div id="no-conv-panel" class="card h-100 d-flex align-items-center justify-content-center">
+      <div class="text-center text-muted p-4">
+        <div style="font-size:4rem">🤖</div>
+        <h5 class="mt-3 fw-semibold">Start a Conversation</h5>
+        <p>Select a conversation from the left, or create a new one to chat with AI.</p>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newConvModal">
+          <i class="bi bi-plus me-1"></i>New Conversation
+        </button>
+      </div>
+    </div>
+
+    <!-- Active conversation -->
+    <div id="chat-panel" class="card h-100 d-flex flex-column" style="display:none!important">
+      <!-- Chat header -->
+      <div class="card-header d-flex align-items-center gap-3">
+        <div class="avatar-sm" style="background:#ede9fe;color:#5b21b6">
+          <i class="bi bi-robot"></i>
+        </div>
+        <div class="flex-grow-1">
+          <div class="fw-semibold" id="chat-title">Conversation</div>
+          <div class="text-muted small" id="chat-project">Project</div>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-sm btn-outline-success" id="submit-response-btn" style="display:none" onclick="openSubmitModal()">
+            <i class="bi bi-send-check me-1"></i>Submit for Review
+          </button>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div class="card-body p-0 flex-grow-1 overflow-auto" style="background:#f8f9fc">
+        <div class="p-3" id="messages-container">
+          <div class="text-center text-muted py-4 small">Start typing to chat with AI…</div>
+        </div>
+        <!-- Typing indicator -->
+        <div class="typing-indicator px-3 pb-2" id="typing-indicator">
+          <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+          <span style="font-size:.8rem">AI is thinking…</span>
+        </div>
+      </div>
+
+      <!-- Input area -->
+      <div class="card-footer bg-white border-top">
+        <div class="d-flex gap-2 align-items-end">
+          <textarea class="form-control" id="message-input" rows="2"
+            placeholder="Type your message… (Ctrl+Enter to send)"
+            style="resize:none;border-radius:10px;font-size:.9rem"></textarea>
+          <button class="btn btn-primary" id="send-btn" style="height:52px;width:52px;border-radius:10px;flex-shrink:0" onclick="sendMessage()">
+            <i class="bi bi-send-fill"></i>
+          </button>
+        </div>
+        <div class="d-flex justify-content-between mt-1">
+          <span class="text-muted" style="font-size:.75rem">Ctrl+Enter to send</span>
+          <span class="text-muted" id="char-count" style="font-size:.75rem">0 chars</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── New Conversation Modal ──────────────────────────────────────────────── -->
+<div class="modal fade" id="newConvModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-chat-plus me-2 text-primary"></i>New Conversation</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Select Project <span class="text-danger">*</span></label>
+          <select class="form-select" id="conv-project-select" required>
+            <option value="">Choose a project…</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Conversation Title <span class="text-muted">(optional)</span></label>
+          <input type="text" class="form-control" id="conv-title" placeholder="e.g. Email draft help" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" id="create-conv-btn" onclick="createConversation()">
+          <i class="bi bi-plus me-1"></i>Start Chat
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Submit for Review Modal ────────────────────────────────────────────── -->
+<div class="modal fade" id="submitModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-send-check me-2 text-success"></i>Submit for Review</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small">Select the AI response you want to submit for moderation review.</p>
+        <div id="submit-messages-list">Loading messages…</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+requireAuth();
+
+const INIT_CONV_ID = {% if conversation_id %}{{ conversation_id }}{% else %}null{% endif %};
+let currentConvId = null;
+let lastAssistantMsgId = null;
+let projects = [];
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+    await Promise.all([loadConversations(), loadProjects()]);
+
+    // Pre-select project from URL param
+    const urlProject = new URLSearchParams(location.search).get('project');
+    if (urlProject) {
+        document.getElementById('conv-project-select').value = urlProject;
+    }
+
+    // Open specific conversation if URL includes it
+    if (INIT_CONV_ID) openConversation(INIT_CONV_ID);
+}
+
+// ── Load sidebar conversation list ────────────────────────────────────────────
+async function loadConversations() {
+    try {
+        const data = await ConversationAPI.list();
+        const convs = data?.results ?? data ?? [];
+        const list = document.getElementById('conv-sidebar-list');
+
+        if (convs.length === 0) {
+            list.innerHTML = `<div class="p-3 text-muted text-center" style="font-size:.85rem">No conversations yet</div>`;
+            return;
+        }
+
+        list.innerHTML = convs.map(c => `
+        <a href="#" onclick="openConversation(${c.id}); return false;"
+           class="list-group-item list-group-item-action border-0 py-3 conv-item" id="conv-item-${c.id}">
+          <div class="text-truncate fw-semibold" style="font-size:.875rem">${escHtml(c.title || 'Untitled')}</div>
+          <div class="text-muted" style="font-size:.75rem">${timeAgo(c.updated_at||c.created_at)}</div>
+        </a>`).join('');
+    } catch (err) {
+        document.getElementById('conv-sidebar-list').innerHTML = `<div class="p-3 text-danger small">Failed to load</div>`;
+    }
+}
+
+// ── Load projects for modal ───────────────────────────────────────────────────
+async function loadProjects() {
+    try {
+        const data = await ProjectAPI.list();
+        projects = data?.results ?? data ?? [];
+        const sel = document.getElementById('conv-project-select');
+        sel.innerHTML = `<option value="">Choose a project…</option>` +
+            projects.map(p => `<option value="${p.id}">${escHtml(p.name)}</option>`).join('');
+    } catch {}
+}
+
+// ── Open Conversation ─────────────────────────────────────────────────────────
+async function openConversation(id) {
+    currentConvId = id;
+
+    // Highlight sidebar item
+    document.querySelectorAll('.conv-item').forEach(el => el.classList.remove('active'));
+    document.getElementById('conv-item-' + id)?.classList.add('active');
+
+    document.getElementById('no-conv-panel').style.display = 'none';
+    document.getElementById('chat-panel').style.display = 'flex';
+
+    // Load conversation detail
+    try {
+        const [conv, messages] = await Promise.all([
+            ConversationAPI.get(id),
+            ConversationAPI.messages(id),
+        ]);
+
+        document.getElementById('chat-title').textContent = conv.title || 'Untitled Conversation';
+        document.getElementById('chat-project').textContent = conv.project_name || 'Project';
+
+        renderMessages(messages ?? []);
+        document.getElementById('submit-response-btn').style.display =
+            (messages ?? []).some(m => m.role === 'assistant') ? 'block' : 'none';
+    } catch (err) {
+        showToast('Failed to load conversation', 'danger');
+    }
+}
+
+// ── Render Messages ───────────────────────────────────────────────────────────
+function renderMessages(messages) {
+    const container = document.getElementById('messages-container');
+
+    if (!messages.length) {
+        container.innerHTML = `<div class="text-center text-muted py-4 small">Start typing to chat with AI…</div>`;
+        return;
+    }
+
+    container.innerHTML = messages.map(m => `
+    <div class="d-flex ${m.role === 'user' ? 'justify-content-end' : 'justify-content-start'} mb-2">
+      <div class="chat-bubble ${m.role === 'user' ? 'user-bubble' : 'ai-bubble'}">
+        ${m.role === 'assistant' ? '<div class="d-flex align-items-center gap-1 mb-1 opacity-75" style="font-size:.75rem"><span>🤖</span><span>AI Assistant</span></div>' : ''}
+        <div>${escHtml(m.content).replace(/\n/g, '<br>')}</div>
+        <div class="bubble-meta">${timeAgo(m.timestamp)}</div>
+      </div>
+    </div>`).join('');
+
+    // Remember last assistant message
+    const assistantMsgs = messages.filter(m => m.role === 'assistant');
+    lastAssistantMsgId = assistantMsgs.length ? assistantMsgs[assistantMsgs.length-1].id : null;
+
+    // Scroll to bottom
+    container.parentElement.scrollTop = container.parentElement.scrollHeight;
+}
+
+function appendMessage(role, content) {
+    const container = document.getElementById('messages-container');
+    const isEmpty = container.querySelector('.text-center.text-muted.py-4');
+    if (isEmpty) isEmpty.remove();
+
+    const div = document.createElement('div');
+    div.className = `d-flex ${role === 'user' ? 'justify-content-end' : 'justify-content-start'} mb-2`;
+    div.innerHTML = `
+    <div class="chat-bubble ${role === 'user' ? 'user-bubble' : 'ai-bubble'}">
+        ${role === 'assistant' ? '<div class="d-flex align-items-center gap-1 mb-1 opacity-75" style="font-size:.75rem"><span>🤖</span><span>AI Assistant</span></div>' : ''}
+        <div>${escHtml(content).replace(/\n/g,'<br>')}</div>
+        <div class="bubble-meta">just now</div>
+    </div>`;
+    container.appendChild(div);
+    container.parentElement.scrollTop = container.parentElement.scrollHeight;
+}
+
+// ── Send Message ──────────────────────────────────────────────────────────────
+async function sendMessage() {
+    if (!currentConvId) { showToast('Select or create a conversation first', 'warning'); return; }
+    const input = document.getElementById('message-input');
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    input.value = '';
+    document.getElementById('char-count').textContent = '0 chars';
+
+    const sendBtn = document.getElementById('send-btn');
+    sendBtn.disabled = true;
+
+    appendMessage('user', msg);
+
+    // Show typing
+    document.getElementById('typing-indicator').style.display = 'flex';
+    document.querySelector('#messages-container').parentElement.scrollTop = 99999;
+
+    try {
+        const res = await ConversationAPI.generateReply(currentConvId, msg);
+        document.getElementById('typing-indicator').style.display = 'none';
+
+        if (res?.assistant_message) {
+            appendMessage('assistant', res.assistant_message.content);
+            lastAssistantMsgId = res.assistant_message.id;
+            document.getElementById('submit-response-btn').style.display = 'block';
+        }
+
+        // Update sidebar conversation time
+        await loadConversations();
+    } catch (err) {
+        document.getElementById('typing-indicator').style.display = 'none';
+        showToast(err.message || 'Failed to get AI response', 'danger');
+        appendMessage('assistant', '⚠️ Sorry, I couldn\'t generate a response. Please try again.');
+    } finally {
+        sendBtn.disabled = false;
+        input.focus();
+    }
+}
+
+// ── Create Conversation ───────────────────────────────────────────────────────
+async function createConversation() {
+    const projectId = document.getElementById('conv-project-select').value;
+    if (!projectId) { showToast('Please select a project', 'warning'); return; }
+
+    const btn = document.getElementById('create-conv-btn');
+    setLoading(btn, true, 'Creating…');
+
+    try {
+        const conv = await ConversationAPI.create(projectId, {
+            title: document.getElementById('conv-title').value.trim()
+        });
+        bootstrap.Modal.getInstance(document.getElementById('newConvModal')).hide();
+        document.getElementById('conv-title').value = '';
+        await loadConversations();
+        openConversation(conv.id);
+    } catch (err) {
+        showToast(err.message || 'Failed to create conversation', 'danger');
+    } finally { setLoading(btn, false); }
+}
+
+// ── Submit for Review ─────────────────────────────────────────────────────────
+async function openSubmitModal() {
+    const modal = new bootstrap.Modal(document.getElementById('submitModal'));
+    const list  = document.getElementById('submit-messages-list');
+    list.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm"></div></div>';
+    modal.show();
+
+    try {
+        const messages = await ConversationAPI.messages(currentConvId);
+        const assistantMsgs = (messages ?? []).filter(m => m.role === 'assistant' && !m.is_submitted);
+
+        if (!assistantMsgs.length) {
+            list.innerHTML = `<p class="text-muted text-center">No new AI responses to submit.</p>`;
+            return;
+        }
+
+        list.innerHTML = assistantMsgs.map(m => `
+        <div class="card mb-2">
+            <div class="card-body py-2">
+                <p class="mb-2" style="font-size:.875rem">${escHtml(m.content.slice(0,200))}${m.content.length>200?'…':''}</p>
+                <button class="btn btn-sm btn-success" onclick="submitResponse(${m.id}, this)">
+                    <i class="bi bi-send-check me-1"></i>Submit This
+                </button>
+            </div>
+        </div>`).join('');
+    } catch (err) {
+        list.innerHTML = `<p class="text-danger">Failed to load messages.</p>`;
+    }
+}
+
+async function submitResponse(messageId, btn) {
+    setLoading(btn, true, 'Submitting…');
+    try {
+        await ResponseAPI.submit({ message: messageId });
+        showToast('Response submitted for review!', 'success');
+        btn.closest('.card').innerHTML = '<div class="card-body text-success py-2"><i class="bi bi-check-circle me-1"></i>Submitted for review</div>';
+    } catch (err) {
+        showToast(err.message || 'Failed to submit', 'danger');
+        setLoading(btn, false);
+    }
+}
+
+// ── Keyboard shortcuts ────────────────────────────────────────────────────────
+document.getElementById('message-input').addEventListener('keydown', function (e) {
+    if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); sendMessage(); }
+});
+
+document.getElementById('message-input').addEventListener('input', function () {
+    document.getElementById('char-count').textContent = this.value.length + ' chars';
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+
+init();
+</script>
+{% endblock %}

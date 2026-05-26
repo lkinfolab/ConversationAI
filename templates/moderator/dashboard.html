@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}Moderator Dashboard – ConversationAI{% endblock %}
+{% block page_title %}Moderation Dashboard{% endblock %}
+{% block nav_mod_dash %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h5 class="fw-bold mb-1">Moderation Dashboard</h5>
+    <p class="text-muted mb-0 small">Review and manage AI response submissions</p>
+  </div>
+  <a href="/moderator/queue/" class="btn btn-primary">
+    <i class="bi bi-list-task me-1"></i>Open Queue
+  </a>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card bg-warning">
+      <div class="stat-icon">⏳</div>
+      <div class="stat-number" id="stat-pending">–</div>
+      <div class="stat-label">Pending Review</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card bg-success">
+      <div class="stat-icon">✅</div>
+      <div class="stat-number" id="stat-approved">–</div>
+      <div class="stat-label">Approved Today</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card bg-danger">
+      <div class="stat-icon">❌</div>
+      <div class="stat-number" id="stat-rejected">–</div>
+      <div class="stat-label">Rejected Today</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card bg-info">
+      <div class="stat-icon">🔄</div>
+      <div class="stat-number" id="stat-crm">–</div>
+      <div class="stat-label">CRM Synced</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Pending Queue Preview -->
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-hourglass-split me-2 text-warning"></i>Pending Queue</span>
+        <a href="/moderator/queue/" class="btn btn-sm btn-outline-primary">View All</a>
+      </div>
+      <div class="card-body p-0" id="pending-queue-preview">
+        <div class="p-4 text-center text-muted"><div class="spinner-border spinner-border-sm"></div> Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Activity -->
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <i class="bi bi-activity me-2 text-primary"></i>Recent Activity
+      </div>
+      <div class="card-body p-0" id="recent-activity">
+        <div class="p-3 text-center text-muted small"><div class="spinner-border spinner-border-sm"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+requireRole('moderator', 'admin');
+
+async function loadDashboard() {
+    try {
+        const queueData = await ModerationAPI.queue();
+        const items = queueData?.results ?? [];
+
+        document.getElementById('stat-pending').textContent = queueData?.count ?? items.length;
+
+        // Approved/rejected today — load from history if admin
+        if (Auth.isAdmin()) {
+            try {
+                const histData = await ModerationAPI.history();
+                const logs = histData?.results ?? [];
+                const today = new Date().toDateString();
+                const todayLogs = logs.filter(l => new Date(l.timestamp).toDateString() === today);
+                document.getElementById('stat-approved').textContent = todayLogs.filter(l => l.action === 'approved').length;
+                document.getElementById('stat-rejected').textContent = todayLogs.filter(l => l.action === 'rejected').length;
+                document.getElementById('stat-crm').textContent = '–';
+
+                // Recent activity
+                const actEl = document.getElementById('recent-activity');
+                if (todayLogs.length === 0) {
+                    actEl.innerHTML = `<div class="p-3 text-muted text-center small">No activity today</div>`;
+                } else {
+                    actEl.innerHTML = `<ul class="list-group list-group-flush">` +
+                        todayLogs.slice(0, 8).map(l => `
+                        <li class="list-group-item py-2 d-flex align-items-center gap-2" style="font-size:.85rem">
+                            <span class="${l.action === 'approved' ? 'text-success' : 'text-danger'}">
+                                <i class="bi bi-${l.action === 'approved' ? 'check' : 'x'}-circle-fill"></i>
+                            </span>
+                            <div>
+                                <div>Response #${l.response_id || '–'} ${l.action}</div>
+                                <div class="text-muted" style="font-size:.72rem">${timeAgo(l.timestamp)}</div>
+                            </div>
+                        </li>`).join('') + `</ul>`;
+                }
+            } catch {
+                document.getElementById('stat-approved').textContent = '–';
+                document.getElementById('stat-rejected').textContent = '–';
+                document.getElementById('recent-activity').innerHTML = `<div class="p-3 text-muted text-center small">History visible to admins only</div>`;
+            }
+        } else {
+            document.getElementById('stat-approved').textContent = '–';
+            document.getElementById('stat-rejected').textContent = '–';
+            document.getElementById('stat-crm').textContent = '–';
+            document.getElementById('recent-activity').innerHTML = `<div class="p-3 text-muted text-center small">Full history visible to admins only</div>`;
+        }
+
+        // Queue preview
+        const queueEl = document.getElementById('pending-queue-preview');
+        if (items.length === 0) {
+            queueEl.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">🎉</div>
+                <h6 class="fw-semibold">Queue is empty!</h6>
+                <p class="small">All responses have been reviewed.</p>
+            </div>`;
+        } else {
+            queueEl.innerHTML = `<div class="list-group list-group-flush">` +
+                items.slice(0, 5).map(item => `
+                <a href="/moderator/queue/${item.id}/review/" class="list-group-item list-group-item-action py-3">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <span class="fw-semibold" style="font-size:.9rem">Response #${item.response?.id || item.id}</span>
+                        <span class="text-muted small">${timeAgo(item.created_at)}</span>
+                    </div>
+                    <p class="mb-1 text-muted text-truncate-2" style="font-size:.85rem">
+                        ${escHtml((item.response?.content || '').slice(0, 120))}${(item.response?.content || '').length > 120 ? '…' : ''}
+                    </p>
+                    <div class="d-flex gap-2">
+                        <span class="badge bg-light text-dark border" style="font-size:.72rem">
+                            <i class="bi bi-person me-1"></i>${escHtml(item.response?.submitted_by_email || 'User')}
+                        </span>
+                        ${statusBadge('pending')}
+                    </div>
+                </a>`).join('') + `</div>
+                ${items.length > 5 ? `<div class="p-2 text-center"><a href="/moderator/queue/" class="btn btn-sm btn-outline-primary">View ${items.length - 5} more</a></div>` : ''}`;
+        }
+
+    } catch (err) {
+        showToast('Failed to load dashboard', 'danger');
+    }
+}
+
+loadDashboard();
+</script>
+{% endblock %}

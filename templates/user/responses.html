@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}My Responses – ConversationAI{% endblock %}
+{% block page_title %}My Responses{% endblock %}
+{% block nav_responses %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h5 class="mb-1 fw-bold">My Submitted Responses</h5>
+    <p class="text-muted mb-0 small">Track AI responses you've submitted for moderation</p>
+  </div>
+</div>
+
+<!-- Status Filter Tabs -->
+<ul class="nav nav-pills mb-4" id="status-tabs">
+  <li class="nav-item"><button class="nav-link active" data-status="all" onclick="filterByStatus(this,'all')">All</button></li>
+  <li class="nav-item"><button class="nav-link" data-status="submitted" onclick="filterByStatus(this,'submitted')">
+    <i class="bi bi-clock me-1 text-warning"></i>Pending
+    <span class="badge bg-warning text-dark ms-1" id="tab-submitted-count"></span>
+  </button></li>
+  <li class="nav-item"><button class="nav-link" data-status="approved" onclick="filterByStatus(this,'approved')">
+    <i class="bi bi-check-circle me-1 text-success"></i>Approved
+    <span class="badge bg-success ms-1" id="tab-approved-count"></span>
+  </button></li>
+  <li class="nav-item"><button class="nav-link" data-status="rejected" onclick="filterByStatus(this,'rejected')">
+    <i class="bi bi-x-circle me-1 text-danger"></i>Rejected
+    <span class="badge bg-danger ms-1" id="tab-rejected-count"></span>
+  </button></li>
+  <li class="nav-item"><button class="nav-link" data-status="draft" onclick="filterByStatus(this,'draft')">
+    <i class="bi bi-file-text me-1 text-secondary"></i>Draft
+  </button></li>
+</ul>
+
+<!-- Responses List -->
+<div id="responses-list">
+  <div class="text-center py-5 text-muted">
+    <div class="spinner-border text-primary mb-2"></div>
+    <div>Loading responses…</div>
+  </div>
+</div>
+
+<!-- Response Detail Modal -->
+<div class="modal fade" id="responseModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Response Detail</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="response-modal-body">Loading…</div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+requireAuth();
+let allResponses = [];
+let currentStatus = 'all';
+
+async function loadResponses() {
+    try {
+        const data = await ResponseAPI.list();
+        allResponses = data?.results ?? data ?? [];
+
+        // Update tab counts
+        document.getElementById('tab-submitted-count').textContent = allResponses.filter(r => r.status === 'submitted').length || '';
+        document.getElementById('tab-approved-count').textContent  = allResponses.filter(r => r.status === 'approved').length || '';
+        document.getElementById('tab-rejected-count').textContent  = allResponses.filter(r => r.status === 'rejected').length || '';
+
+        renderResponses(currentStatus);
+    } catch (err) {
+        showToast('Failed to load responses', 'danger');
+        document.getElementById('responses-list').innerHTML = `<div class="text-center py-4 text-danger">Failed to load. <a href="" onclick="location.reload()">Retry</a></div>`;
+    }
+}
+
+function filterByStatus(btn, status) {
+    document.querySelectorAll('#status-tabs .nav-link').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentStatus = status;
+    renderResponses(status);
+}
+
+function renderResponses(status) {
+    const filtered = status === 'all' ? allResponses : allResponses.filter(r => r.status === status);
+    const container = document.getElementById('responses-list');
+
+    if (filtered.length === 0) {
+        container.innerHTML = `
+        <div class="empty-state">
+            <div class="empty-icon">📭</div>
+            <h5>No ${status !== 'all' ? status : ''} responses found</h5>
+            <p class="text-muted">Submit AI responses from the Chat page to see them here.</p>
+            <a href="/chat/" class="btn btn-primary btn-sm"><i class="bi bi-chat-dots me-1"></i>Go to Chat</a>
+        </div>`;
+        return;
+    }
+
+    container.innerHTML = `<div class="row g-3">` + filtered.map(r => `
+    <div class="col-12">
+      <div class="card cursor-pointer hover-card" onclick="viewResponse(${r.id})">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div class="d-flex align-items-center gap-2">
+              ${statusBadge(r.status)}
+              <span class="text-muted small">Response #${r.id}</span>
+            </div>
+            <span class="text-muted small">${timeAgo(r.created_at)}</span>
+          </div>
+          <p class="mb-2" style="font-size:.9rem;color:#374151">
+            ${escHtml((r.content || '').slice(0, 200))}${(r.content || '').length > 200 ? '…' : ''}
+          </p>
+          <div class="d-flex align-items-center gap-3">
+            <span class="text-muted small"><i class="bi bi-folder2 me-1"></i>${escHtml(r.project_name || r.conversation_project || 'Project')}</span>
+            ${r.status === 'approved' ? `<span class="text-success small"><i class="bi bi-check-circle me-1"></i>Approved by moderator</span>` : ''}
+            ${r.status === 'rejected' ? `<span class="text-danger small"><i class="bi bi-x-circle me-1"></i>Rejected</span>` : ''}
+          </div>
+        </div>
+      </div>
+    </div>`).join('') + `</div>`;
+}
+
+async function viewResponse(id) {
+    const modal = new bootstrap.Modal(document.getElementById('responseModal'));
+    document.getElementById('response-modal-body').innerHTML = '<div class="text-center p-4"><div class="spinner-border"></div></div>';
+    modal.show();
+
+    try {
+        const r = await ResponseAPI.get(id);
+        document.getElementById('response-modal-body').innerHTML = `
+        <div class="row g-3">
+          <div class="col-md-8">
+            <p class="text-muted small fw-semibold mb-1">Response Content</p>
+            <div class="p-3 bg-light rounded" style="font-size:.9rem;white-space:pre-wrap">${escHtml(r.content || '')}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="mb-3">
+              <p class="text-muted small fw-semibold mb-1">Status</p>
+              ${statusBadge(r.status)}
+            </div>
+            <div class="mb-3">
+              <p class="text-muted small fw-semibold mb-1">Submitted</p>
+              <p class="mb-0 small">${new Date(r.created_at).toLocaleString()}</p>
+            </div>
+            ${r.approval ? `
+            <div class="mb-3">
+              <p class="text-muted small fw-semibold mb-1">Moderator Decision</p>
+              <p class="mb-0 small">${escHtml(r.approval.moderator_name || 'Moderator')}</p>
+              ${r.approval.comments ? `<p class="mb-0 small text-muted mt-1">"${escHtml(r.approval.comments)}"</p>` : ''}
+              ${r.approval.crm_synced ? '<p class="text-success small mt-1"><i class="bi bi-cloud-check me-1"></i>CRM Synced</p>' : ''}
+            </div>` : ''}
+          </div>
+        </div>`;
+    } catch (err) {
+        document.getElementById('response-modal-body').innerHTML = '<p class="text-danger text-center">Failed to load response detail.</p>';
+    }
+}
+
+loadResponses();
+</script>
+{% endblock %}
