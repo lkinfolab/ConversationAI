@@ -4,91 +4,43 @@
 {% block nav_history %}active{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <div>
-    <h5 class="fw-bold mb-1">Moderation History</h5>
-    <p class="text-muted mb-0 small">Complete audit log of all moderation actions (Admin only)</p>
+<div class="card">
+  <div class="card-header">
+    <h5 class="mb-0">All Moderation Actions</h5>
   </div>
-</div>
-
-<div class="card table-card">
-  <div class="card-header d-flex justify-content-between align-items-center">
-    <span><i class="bi bi-clock-history me-2 text-primary"></i>Audit Log</span>
-    <span class="badge bg-secondary" id="total-count"></span>
-  </div>
-  <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-hover mb-0">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Action</th>
-            <th>Response #</th>
-            <th>Submitted By</th>
-            <th>Moderator</th>
-            <th>Notes</th>
-            <th>Timestamp</th>
-          </tr>
-        </thead>
-        <tbody id="history-tbody">
-          <tr><td colspan="7" class="text-center py-4 text-muted">
-            <div class="spinner-border spinner-border-sm me-2"></div>Loading…
-          </td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-{% endblock %}
-
-{% block extra_scripts %}
-<script>
-requireRole('moderator', 'admin');
-
-async function loadHistory() {
-    try {
-        const data = await ModerationAPI.history();
-        const logs = data?.results ?? [];
-
-        document.getElementById('total-count').textContent = `${data?.count ?? logs.length} entries`;
-
-        const tbody = document.getElementById('history-tbody');
-        if (logs.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5 text-muted">No moderation history yet.</td></tr>`;
-            return;
-        }
-
-        tbody.innerHTML = logs.map(l => `
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
         <tr>
-            <td class="text-muted small">#${l.id}</td>
-            <td>
-                <span class="badge ${l.action === 'approved' ? 'bg-success' : l.action === 'rejected' ? 'bg-danger' : 'bg-secondary'}">
-                    <i class="bi bi-${l.action === 'approved' ? 'check' : l.action === 'rejected' ? 'x' : 'arrow-repeat'}-circle me-1"></i>
-                    ${l.action}
-                </span>
-            </td>
-            <td><a href="/moderator/queue/" class="text-decoration-none">#${l.response_id || l.response || '–'}</a></td>
-            <td style="font-size:.85rem">${escHtml(l.submitted_by_email || '–')}</td>
-            <td style="font-size:.85rem">${escHtml(l.moderator_email || l.moderator || '–')}</td>
-            <td style="font-size:.85rem;max-width:200px" class="text-truncate text-muted">${escHtml(l.notes || '–')}</td>
-            <td style="font-size:.8rem" class="text-muted">${timeAgo(l.timestamp)}<br>
-                <span style="font-size:.7rem">${new Date(l.timestamp).toLocaleString()}</span>
-            </td>
-        </tr>`).join('');
-
-    } catch (err) {
-        if (err.message?.includes('admins')) {
-            document.getElementById('history-tbody').innerHTML = `
-            <tr><td colspan="7" class="text-center py-5 text-muted">
-                <i class="bi bi-lock fs-2 mb-2"></i><br>
-                Full history is only accessible to administrators.
-            </td></tr>`;
-        } else {
-            showToast('Failed to load history', 'danger');
-        }
-    }
-}
-
-loadHistory();
-</script>
+          <th>User</th>
+          <th>Action</th>
+          <th>Decision</th>
+          <th>Moderator</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td>{{ log.response.submitted_by.email }}</td>
+          <td><small class="text-muted">{{ log.get_action_display }}</small></td>
+          <td>
+            {% if log.action == 'approved' %}
+            <span class="badge bg-success">Approved</span>
+            {% elif log.action == 'rejected' %}
+            <span class="badge bg-danger">Rejected</span>
+            {% endif %}
+          </td>
+          <td>{{ log.moderator.email }}</td>
+          <td><small class="text-muted">{{ log.timestamp|date:"M d, h:i A" }}</small></td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center text-muted py-4">No history yet</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
 {% endblock %}

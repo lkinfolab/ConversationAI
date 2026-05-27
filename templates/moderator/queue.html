@@ -4,192 +4,50 @@
 {% block nav_queue %}active{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <div>
-    <h5 class="fw-bold mb-1">Moderation Queue</h5>
-    <p class="text-muted mb-0 small">Review and approve or reject AI responses</p>
+<div class="card">
+  <div class="card-header">
+    <h5 class="mb-0">Pending Reviews</h5>
   </div>
-  <div class="d-flex gap-2 align-items-center">
-    <span class="badge bg-warning text-dark fs-6" id="queue-count-badge">0 pending</span>
-    <button class="btn btn-outline-secondary btn-sm" onclick="loadQueue()">
-      <i class="bi bi-arrow-clockwise"></i> Refresh
-    </button>
-  </div>
-</div>
-
-<!-- Queue Table -->
-<div class="card table-card">
-  <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-hover mb-0" id="queue-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>User</th>
-            <th>Response Preview</th>
-            <th>Project</th>
-            <th>Submitted</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="queue-tbody">
-          <tr><td colspan="7" class="text-center py-4 text-muted">
-            <div class="spinner-border spinner-border-sm me-2"></div>Loading queue…
-          </td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-<!-- Quick Approve/Reject Modal -->
-<div class="modal fade" id="decisionModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header" id="decision-modal-header">
-        <h5 class="modal-title" id="decision-modal-title">Review Response</h5>
-        <button class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div class="p-3 bg-light rounded mb-3" id="decision-response-content" style="font-size:.9rem;max-height:200px;overflow-y:auto"></div>
-        <div class="mb-3">
-          <label class="form-label fw-semibold">Comments <span class="text-muted">(optional)</span></label>
-          <textarea class="form-control" id="decision-comments" rows="3" placeholder="Add feedback for the user…"></textarea>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button class="btn btn-danger" id="reject-btn" onclick="submitDecision('rejected')">
-          <i class="bi bi-x-circle me-1"></i>Reject
-        </button>
-        <button class="btn btn-success" id="approve-btn" onclick="submitDecision('approved')">
-          <i class="bi bi-check-circle me-1"></i>Approve
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-{% endblock %}
-
-{% block extra_scripts %}
-<script>
-requireRole('moderator', 'admin');
-let currentQueueItemId = null;
-
-async function loadQueue() {
-    const tbody = document.getElementById('queue-tbody');
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Loading…</td></tr>';
-
-    try {
-        const data = await ModerationAPI.queue();
-        const items = data?.results ?? [];
-
-        document.getElementById('queue-count-badge').textContent = `${data?.count ?? items.length} pending`;
-
-        if (items.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" class="py-5">
-                <div class="empty-state">
-                    <div class="empty-icon">🎉</div>
-                    <h6 class="fw-semibold">Queue is empty!</h6>
-                    <p class="small text-muted">All responses have been reviewed.</p>
-                </div>
-            </td></tr>`;
-            return;
-        }
-
-        tbody.innerHTML = items.map(item => `
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
         <tr>
-            <td class="text-muted small">#${item.id}</td>
-            <td>
-                <div class="d-flex align-items-center gap-2">
-                    <div class="avatar-sm" style="background:#e0e7ff;color:#4f46e5;width:28px;height:28px;font-size:.7rem">
-                        ${(item.response?.submitted_by_email?.[0] || 'U').toUpperCase()}
-                    </div>
-                    <span style="font-size:.875rem">${escHtml(item.response?.submitted_by_email || '–')}</span>
-                </div>
-            </td>
-            <td style="max-width:260px">
-                <div class="text-truncate-2" style="font-size:.85rem;color:#374151">
-                    ${escHtml((item.response?.content || '').slice(0, 120))}
-                </div>
-            </td>
-            <td style="font-size:.85rem" class="text-muted">
-                ${escHtml(item.response?.project_name || item.response?.conversation_project || '–')}
-            </td>
-            <td style="font-size:.8rem" class="text-muted">${timeAgo(item.created_at)}</td>
-            <td>${statusBadge('pending')}</td>
-            <td>
-                <div class="d-flex gap-1">
-                    <a href="/moderator/queue/${item.id}/review/" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-eye"></i>
-                    </a>
-                    <button class="btn btn-sm btn-success" onclick="quickApprove(${item.id}, this)" title="Quick Approve">
-                        <i class="bi bi-check"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="openDecisionModal(${item.id}, 'reject', ${JSON.stringify(escHtml(item.response?.content||'')).slice(1,-1)})" title="Reject">
-                        <i class="bi bi-x"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>`).join('');
-
-    } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">Failed to load queue. <button class="btn btn-sm btn-link" onclick="loadQueue()">Retry</button></td></tr>`;
-        showToast('Failed to load queue', 'danger');
-    }
-}
-
-async function quickApprove(id, btn) {
-    const origHtml = btn.innerHTML;
-    btn.innerHTML = '<div class="spinner-border spinner-border-sm"></div>';
-    btn.disabled = true;
-    try {
-        const res = await ModerationAPI.approve(id, { comments: '' });
-        showToast(`Response approved!${res.crm_synced ? ' ✓ CRM synced' : ''}`, 'success');
-        await loadQueue();
-    } catch (err) {
-        showToast(err.message || 'Failed to approve', 'danger');
-        btn.innerHTML = origHtml;
-        btn.disabled = false;
-    }
-}
-
-function openDecisionModal(id, action, contentPreview) {
-    currentQueueItemId = id;
-    document.getElementById('decision-modal-title').textContent = action === 'reject' ? 'Reject Response' : 'Approve Response';
-    document.getElementById('decision-modal-header').className = `modal-header bg-${action === 'reject' ? 'danger' : 'success'} text-white`;
-    document.getElementById('decision-response-content').textContent = contentPreview || '(No content)';
-    document.getElementById('decision-comments').value = '';
-    new bootstrap.Modal(document.getElementById('decisionModal')).show();
-}
-
-async function submitDecision(decision) {
-    if (!currentQueueItemId) return;
-    const comments = document.getElementById('decision-comments').value.trim();
-    const btn = decision === 'approved'
-        ? document.getElementById('approve-btn')
-        : document.getElementById('reject-btn');
-
-    setLoading(btn, true, decision === 'approved' ? 'Approving…' : 'Rejecting…');
-
-    try {
-        if (decision === 'approved') {
-            const res = await ModerationAPI.approve(currentQueueItemId, { comments });
-            showToast(`Approved!${res.crm_synced ? ' ✓ CRM synced' : ''}`, 'success');
-        } else {
-            await ModerationAPI.reject(currentQueueItemId, { comments });
-            showToast('Response rejected.', 'info');
-        }
-        bootstrap.Modal.getInstance(document.getElementById('decisionModal')).hide();
-        await loadQueue();
-    } catch (err) {
-        showToast(err.message || `Failed to ${decision}`, 'danger');
-    } finally {
-        setLoading(btn, false);
-    }
-}
-
-loadQueue();
-</script>
+          <th>User</th>
+          <th>Response Content</th>
+          <th>Submitted</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in queue_items %}
+        <tr>
+          <td>
+            <strong>{{ item.response.submitted_by.email }}</strong>
+            <br>
+            <small class="text-muted">{{ item.response.submitted_by.first_name }} {{ item.response.submitted_by.last_name }}</small>
+          </td>
+          <td>
+            <small>{{ item.response.message.content|truncatewords:15 }}</small>
+          </td>
+          <td>
+            <small class="text-muted">{{ item.created_at|date:"M d, h:i A" }}</small>
+          </td>
+          <td>
+            <a href="{% url 'frontend:moderator_review' item.id %}" class="btn btn-sm btn-primary">
+              <i class="bi bi-eye me-1"></i>Review
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" class="text-center text-muted py-5">
+            <div style="font-size: 2rem; margin-bottom: 1rem;">✅</div>
+            <p>No pending reviews! Great work.</p>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
 {% endblock %}

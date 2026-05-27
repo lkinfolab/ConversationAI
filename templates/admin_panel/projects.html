@@ -1,104 +1,40 @@
 {% extends "base.html" %}
-{% block title %}All Projects – ConversationAI{% endblock %}
-{% block page_title %}All Projects{% endblock %}
+{% block title %}Manage Projects – ConversationAI{% endblock %}
+{% block page_title %}Manage Projects{% endblock %}
 {% block nav_admin_projects %}active{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <div>
-    <h5 class="fw-bold mb-1">All Projects</h5>
-    <p class="text-muted mb-0 small">Overview of all projects across all users</p>
+<div class="card">
+  <div class="card-header">
+    <h5 class="mb-0">All Projects</h5>
   </div>
-  <div class="input-group input-group-sm" style="width:240px">
-    <span class="input-group-text"><i class="bi bi-search"></i></span>
-    <input type="text" class="form-control" id="proj-search" placeholder="Search projects…" oninput="filterProjects()" />
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th>Project Name</th>
+          <th>Owner</th>
+          <th>Description</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for project in projects %}
+        <tr>
+          <td><strong>{{ project.name }}</strong></td>
+          <td>{{ project.owner.email }}</td>
+          <td><small>{{ project.description|truncatewords:10 }}</small></td>
+          <td>
+            <a href="{% url 'frontend:user_project_detail' project.id %}" class="btn btn-sm btn-outline-primary">View</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" class="text-center text-muted py-4">No projects yet</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 </div>
-
-<div class="card table-card">
-  <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-hover mb-0">
-        <thead>
-          <tr>
-            <th>Project</th>
-            <th>Owner</th>
-            <th>Members</th>
-            <th>Status</th>
-            <th>Created</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="projects-tbody">
-          <tr><td colspan="6" class="text-center py-4 text-muted">
-            <div class="spinner-border spinner-border-sm me-2"></div>Loading projects…
-          </td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-{% endblock %}
-
-{% block extra_scripts %}
-<script>
-requireRole('admin');
-let allProjects = [];
-
-async function loadProjects() {
-    try {
-        const data = await ProjectAPI.list();
-        allProjects = data?.results ?? data ?? [];
-        filterProjects();
-    } catch (err) {
-        showToast('Failed to load projects', 'danger');
-        document.getElementById('projects-tbody').innerHTML =
-            `<tr><td colspan="6" class="text-center text-danger py-4">Failed to load.</td></tr>`;
-    }
-}
-
-function filterProjects() {
-    const search = document.getElementById('proj-search').value.toLowerCase();
-    const filtered = !search ? allProjects : allProjects.filter(p =>
-        p.name?.toLowerCase().includes(search) ||
-        p.description?.toLowerCase().includes(search) ||
-        p.owner_email?.toLowerCase().includes(search)
-    );
-    renderProjects(filtered);
-}
-
-function renderProjects(projects) {
-    const tbody = document.getElementById('projects-tbody');
-    if (projects.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5 text-muted">No projects found.</td></tr>`;
-        return;
-    }
-
-    tbody.innerHTML = projects.map(p => `
-    <tr>
-        <td>
-            <div class="d-flex align-items-center gap-2">
-                <div style="width:32px;height:32px;background:#ede9fe;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem">📋</div>
-                <div>
-                    <div class="fw-semibold" style="font-size:.875rem">${escHtml(p.name)}</div>
-                    <div class="text-muted text-truncate" style="font-size:.75rem;max-width:200px">${escHtml(p.description||'No description')}</div>
-                </div>
-            </div>
-        </td>
-        <td style="font-size:.875rem">${escHtml(p.owner_email || p.owner_name || '–')}</td>
-        <td><span class="badge bg-light text-dark border">${p.member_count ?? 0}</span></td>
-        <td>${p.is_active
-            ? '<span class="badge bg-success-subtle text-success">Active</span>'
-            : '<span class="badge bg-secondary">Inactive</span>'}</td>
-        <td style="font-size:.8rem" class="text-muted">${new Date(p.created_at).toLocaleDateString()}</td>
-        <td>
-            <a href="/projects/${p.id}/" class="btn btn-sm btn-outline-primary">
-                <i class="bi bi-eye"></i>
-            </a>
-        </td>
-    </tr>`).join('');
-}
-
-loadProjects();
-</script>
 {% endblock %}

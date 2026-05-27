@@ -4,216 +4,79 @@
 {% block nav_admin_dash %}active{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <div>
-    <h5 class="fw-bold mb-1">Administration Dashboard</h5>
-    <p class="text-muted mb-0 small">System overview and management</p>
-  </div>
-  <div class="d-flex gap-2">
-    <a href="/admin-panel/users/" class="btn btn-outline-primary btn-sm">
-      <i class="bi bi-people me-1"></i>Manage Users
-    </a>
-    <a href="/admin/" target="_blank" class="btn btn-outline-secondary btn-sm">
-      <i class="bi bi-gear me-1"></i>Django Admin
-    </a>
-  </div>
-</div>
-
-<!-- System Stats -->
-<div class="row g-3 mb-4">
-  <div class="col-6 col-md-2">
-    <div class="stat-card bg-primary">
-      <div class="stat-icon">👥</div>
-      <div class="stat-number" id="stat-total-users">–</div>
-      <div class="stat-label">Total Users</div>
+<div class="row g-4 mb-4">
+  <div class="col-md-6 col-lg-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <h6 class="card-title text-muted mb-2">Total Users</h6>
+            <h2 class="mb-0">{{ total_users }}</h2>
+          </div>
+          <div style="font-size: 2rem;">👥</div>
+        </div>
+      </div>
     </div>
   </div>
-  <div class="col-6 col-md-2">
-    <div class="stat-card bg-info">
-      <div class="stat-icon">🛡️</div>
-      <div class="stat-number" id="stat-moderators">–</div>
-      <div class="stat-label">Moderators</div>
+  <div class="col-md-6 col-lg-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <h6 class="card-title text-muted mb-2">Projects</h6>
+            <h2 class="mb-0">{{ total_projects }}</h2>
+          </div>
+          <div style="font-size: 2rem;">📁</div>
+        </div>
+      </div>
     </div>
   </div>
-  <div class="col-6 col-md-2">
-    <div class="stat-card bg-success">
-      <div class="stat-icon">📁</div>
-      <div class="stat-number" id="stat-projects">–</div>
-      <div class="stat-label">Projects</div>
+  <div class="col-md-6 col-lg-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <h6 class="card-title text-muted mb-2">Conversations</h6>
+            <h2 class="mb-0">{{ total_conversations }}</h2>
+          </div>
+          <div style="font-size: 2rem;">💬</div>
+        </div>
+      </div>
     </div>
   </div>
-  <div class="col-6 col-md-2">
-    <div class="stat-card bg-warning">
-      <div class="stat-icon">⏳</div>
-      <div class="stat-number" id="stat-pending">–</div>
-      <div class="stat-label">Pending</div>
-    </div>
-  </div>
-  <div class="col-6 col-md-2">
-    <div class="stat-card bg-danger">
-      <div class="stat-icon">📋</div>
-      <div class="stat-number" id="stat-total-responses">–</div>
-      <div class="stat-label">Responses</div>
-    </div>
-  </div>
-  <div class="col-6 col-md-2">
-    <div class="stat-card" style="background:linear-gradient(135deg,#8b5cf6,#a78bfa)">
-      <div class="stat-icon">🔄</div>
-      <div class="stat-number" id="stat-crm-synced">–</div>
-      <div class="stat-label">CRM Synced</div>
+  <div class="col-md-6 col-lg-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <h6 class="card-title text-muted mb-2">Pending Approvals</h6>
+            <h2 class="mb-0">{{ pending_approvals }}</h2>
+          </div>
+          <div style="font-size: 2rem;">⏳</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
 <div class="row g-4">
-
-  <!-- Users by Role -->
-  <div class="col-md-4">
-    <div class="card h-100">
-      <div class="card-header fw-semibold">
-        <i class="bi bi-pie-chart me-2 text-primary"></i>Users by Role
-      </div>
-      <div class="card-body d-flex flex-column justify-content-center" id="role-distribution">
-        <div class="text-center text-muted"><div class="spinner-border spinner-border-sm"></div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Recent Users -->
-  <div class="col-md-4">
-    <div class="card h-100">
-      <div class="card-header d-flex justify-content-between">
-        <span class="fw-semibold"><i class="bi bi-person-plus me-2 text-success"></i>Recent Users</span>
-        <a href="/admin-panel/users/" class="btn btn-sm btn-link p-0">View all</a>
-      </div>
-      <div class="card-body p-0" id="recent-users-list">
-        <div class="p-3 text-center text-muted"><div class="spinner-border spinner-border-sm"></div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Pending Queue + Moderation Actions -->
-  <div class="col-md-4">
-    <div class="card mb-3">
-      <div class="card-header fw-semibold d-flex justify-content-between">
-        <span><i class="bi bi-hourglass-split me-2 text-warning"></i>Moderation Queue</span>
-        <a href="/moderator/queue/" class="btn btn-sm btn-warning btn-sm">Review</a>
-      </div>
-      <div class="card-body p-0">
-        <div id="admin-queue-preview">
-          <div class="p-3 text-center text-muted"><div class="spinner-border spinner-border-sm"></div></div>
-        </div>
-      </div>
-    </div>
+  <div class="col-12">
     <div class="card">
-      <div class="card-header fw-semibold"><i class="bi bi-link-45deg me-2 text-info"></i>Quick Links</div>
-      <div class="card-body d-grid gap-2">
-        <a href="/admin-panel/users/" class="btn btn-outline-primary btn-sm"><i class="bi bi-people me-1"></i>User Management</a>
-        <a href="/admin-panel/projects/" class="btn btn-outline-success btn-sm"><i class="bi bi-folder me-1"></i>All Projects</a>
-        <a href="/moderator/history/" class="btn btn-outline-secondary btn-sm"><i class="bi bi-clock-history me-1"></i>Audit Log</a>
-        <a href="/admin/" target="_blank" class="btn btn-outline-dark btn-sm"><i class="bi bi-gear me-1"></i>Django Admin</a>
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Quick Actions</h5>
+      </div>
+      <div class="card-body d-flex gap-2">
+        <a href="{% url 'frontend:admin_users' %}" class="btn btn-primary">
+          <i class="bi bi-people me-1"></i>Manage Users
+        </a>
+        <a href="{% url 'frontend:admin_projects' %}" class="btn btn-outline-primary">
+          <i class="bi bi-folder2 me-1"></i>Manage Projects
+        </a>
+        <a href="{% url 'frontend:moderator_queue' %}" class="btn btn-outline-warning">
+          <i class="bi bi-list-check me-1"></i>Pending Reviews
+        </a>
       </div>
     </div>
   </div>
-
 </div>
-{% endblock %}
-
-{% block extra_scripts %}
-<script>
-requireRole('admin');
-
-async function loadAdminDashboard() {
-    try {
-        const [users, projects, queue, history] = await Promise.all([
-            UserAPI.listUsers(),
-            ProjectAPI.list(),
-            ModerationAPI.queue(),
-            ModerationAPI.history().catch(() => ({ results: [] })),
-        ]);
-
-        const allUsers = users?.results ?? users ?? [];
-        const allProjects = projects?.results ?? projects ?? [];
-        const queueItems = queue?.results ?? [];
-        const historyItems = history?.results ?? [];
-
-        // Stats
-        document.getElementById('stat-total-users').textContent   = allUsers.length;
-        document.getElementById('stat-moderators').textContent    = allUsers.filter(u => u.role === 'moderator').length;
-        document.getElementById('stat-projects').textContent      = allProjects.length;
-        document.getElementById('stat-pending').textContent       = queue?.count ?? queueItems.length;
-        document.getElementById('stat-total-responses').textContent = historyItems.length;
-        document.getElementById('stat-crm-synced').textContent    = '–';
-
-        // Role distribution
-        const admins = allUsers.filter(u => u.role === 'admin').length;
-        const mods   = allUsers.filter(u => u.role === 'moderator').length;
-        const regular= allUsers.filter(u => u.role === 'user').length;
-        const total  = allUsers.length || 1;
-
-        document.getElementById('role-distribution').innerHTML = `
-        <div class="mb-3">
-            <div class="d-flex justify-content-between mb-1">
-                <span class="small">Users</span>
-                <span class="badge bg-primary">${regular}</span>
-            </div>
-            <div class="progress mb-3" style="height:8px">
-                <div class="progress-bar bg-primary" style="width:${Math.round(regular/total*100)}%"></div>
-            </div>
-            <div class="d-flex justify-content-between mb-1">
-                <span class="small">Moderators</span>
-                <span class="badge bg-warning text-dark">${mods}</span>
-            </div>
-            <div class="progress mb-3" style="height:8px">
-                <div class="progress-bar bg-warning" style="width:${Math.round(mods/total*100)}%"></div>
-            </div>
-            <div class="d-flex justify-content-between mb-1">
-                <span class="small">Admins</span>
-                <span class="badge bg-danger">${admins}</span>
-            </div>
-            <div class="progress" style="height:8px">
-                <div class="progress-bar bg-danger" style="width:${Math.round(admins/total*100)}%"></div>
-            </div>
-        </div>
-        <div class="text-center text-muted small">${total} total users</div>`;
-
-        // Recent users
-        const recentUsersEl = document.getElementById('recent-users-list');
-        recentUsersEl.innerHTML = `<ul class="list-group list-group-flush">` +
-            allUsers.slice(0, 6).map(u => `
-            <li class="list-group-item d-flex align-items-center gap-2 py-2">
-                <div class="avatar-sm" style="background:#e0e7ff;color:#4f46e5;width:28px;height:28px;font-size:.7rem">
-                    ${(u.email?.[0]||'U').toUpperCase()}
-                </div>
-                <div class="flex-grow-1 overflow-hidden">
-                    <div class="text-truncate" style="font-size:.85rem">${escHtml(u.email||'')}</div>
-                </div>
-                ${roleBadge(u.role)}
-            </li>`).join('') + `</ul>`;
-
-        // Queue preview
-        const queueEl = document.getElementById('admin-queue-preview');
-        if (queueItems.length === 0) {
-            queueEl.innerHTML = `<div class="p-3 text-center text-muted small">Queue is empty 🎉</div>`;
-        } else {
-            queueEl.innerHTML = `
-            <div class="list-group list-group-flush">
-                ${queueItems.slice(0,3).map(item => `
-                <a href="/moderator/queue/${item.id}/review/" class="list-group-item list-group-item-action py-2" style="font-size:.85rem">
-                    <div class="d-flex justify-content-between">
-                        <span class="text-truncate me-2">${escHtml((item.response?.content||'').slice(0,80))}</span>
-                        <span class="text-muted small flex-shrink-0">${timeAgo(item.created_at)}</span>
-                    </div>
-                </a>`).join('')}
-                ${queueItems.length > 3 ? `<div class="p-2 text-center text-muted small">+${queueItems.length-3} more</div>` : ''}
-            </div>`;
-        }
-
-    } catch (err) {
-        showToast('Failed to load admin dashboard', 'danger');
-    }
-}
-
-loadAdminDashboard();
-</script>
 {% endblock %}
