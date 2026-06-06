@@ -175,7 +175,7 @@
 <!-- Login page layout (no sidebar) -->
 <div style="display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
   <div style="background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); width: 100%; max-width: 400px;">
-    {% block content %}{% endblock %}
+    {% block auth_content %}{% endblock %}
   </div>
 </div>
 {% endif %}
@@ -183,6 +183,8 @@
 
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Global API helpers (showToast, escHtml, Auth, etc.) -->
+<script src="{% static 'js/api.js' %}"></script>
 
 <script>
 // Mobile sidebar toggle

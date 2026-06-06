@@ -46,7 +46,7 @@
       </div>
       <div class="list-group list-group-flush">
         {% for conv in recent_conversations %}
-        <a href="{% url 'frontend:user_chat' conv.id %}" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
+        <a href="{% url 'frontend:user_chat_conversation' conv.id %}" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
           <div class="avatar-sm bg-indigo text-white" style="background:#ede9fe;color:#5b21b6;flex-shrink:0">
             <i class="bi bi-chat-dots"></i>
           </div>

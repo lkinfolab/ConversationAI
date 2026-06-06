@@ -147,20 +147,37 @@ def user_chat(request, conversation_id=None):
         conversation = None
         messages = []
 
-    user_conversations = Conversation.objects.filter(user=request.user).order_by('-updated_at')
+    user_conversations = Conversation.objects.filter(user=request.user).select_related('project').order_by('-updated_at')
+    user_projects = Project.objects.filter(members__user=request.user, is_active=True)
 
     context = {
         'conversation': conversation,
         'messages': messages,
         'conversations': user_conversations,
+        'user_projects': user_projects,
     }
     return render(request, 'user/chat.html', context)
 
 
 @login_required_decorator
+@require_http_methods(['POST'])
+def create_conversation(request):
+    project_id = request.POST.get('project_id')
+    title = request.POST.get('title', '').strip() or 'New Conversation'
+
+    project = get_object_or_404(Project, id=project_id, members__user=request.user, is_active=True)
+    conversation = Conversation.objects.create(
+        user=request.user,
+        project=project,
+        title=title,
+    )
+    return redirect('frontend:user_chat_conversation', conversation_id=conversation.id)
+
+
+@login_required_decorator
 def user_responses(request):
     responses = Response.objects.filter(submitted_by=request.user).select_related(
-        'message__conversation', 'response_approval'
+        'message__conversation', 'approval'
     ).order_by('-created_at')
 
     context = {

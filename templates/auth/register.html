@@ -1,9 +1,9 @@
-{% load static %}
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Register – ConversationAI{% endblock %}
 
-{% block content %}
+{% block auth_content %}
 <div style="text-align: center; margin-bottom: 2rem;">
   <div style="font-size: 3rem; margin-bottom: 1rem;">✨</div>
   <h2 style="margin: 0; color: #333;">Create account</h2>
@@ -95,4 +95,4 @@ document.getElementById('password').addEventListener('input', function () {
     document.getElementById('strength-label').textContent = pw.length > 0 ? labels[score] : '';
 });
 </script>
-{% endblock %}
+{% endblock auth_content %}

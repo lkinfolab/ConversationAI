@@ -15,6 +15,7 @@ urlpatterns = [
     path('projects/', views.user_projects, name='user_projects'),
     path('projects/<int:project_id>/', views.user_project_detail, name='user_project_detail'),
     path('chat/', views.user_chat, name='user_chat'),
+    path('chat/new/', views.create_conversation, name='create_conversation'),
     path('chat/<int:conversation_id>/', views.user_chat, name='user_chat_conversation'),
     path('my-responses/', views.user_responses, name='user_responses'),
     path('profile/', views.user_profile, name='user_profile'),

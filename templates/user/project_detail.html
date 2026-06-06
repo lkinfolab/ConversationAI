@@ -36,7 +36,7 @@
               <td><small class="text-muted">-</small></td>
               <td><small class="text-muted">{{ conv.updated_at|date:"M d, h:i A" }}</small></td>
               <td>
-                <a href="{% url 'frontend:user_chat' conv.id %}" class="btn btn-sm btn-outline-primary">Open</a>
+                <a href="{% url 'frontend:user_chat_conversation' conv.id %}" class="btn btn-sm btn-outline-primary">Open</a>
               </td>
             </tr>
             {% empty %}

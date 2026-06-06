@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
-from apps.conversations.models import Conversation, Message, Response, ResponseApproval
+from apps.conversations.models import Conversation, Message, Response as ResponseModel, ResponseApproval
 from apps.conversations.serializers import (
     ConversationListSerializer,
     ConversationDetailSerializer,
@@ -146,7 +146,7 @@ class ResponseViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Return responses submitted by current user."""
-        return Response.objects.filter(submitted_by=self.request.user)
+        return ResponseModel.objects.filter(submitted_by=self.request.user)
 
     def get_serializer_class(self):
         if self.action == 'create':

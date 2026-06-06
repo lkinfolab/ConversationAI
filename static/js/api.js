@@ -117,16 +117,16 @@ const UserAPI = {
 const ProjectAPI = {
     list:       ()          => API.get('/projects/'),
     create:     (data)      => API.post('/projects/', data),
-    get:        (id)        => API.get(`/projects/${id}`),
-    update:     (id, data)  => API.put(`/projects/${id}`, data),
+    get:        (id)        => API.get(`/projects/${id}/`),
+    update:     (id, data)  => API.put(`/projects/${id}/`, data),
     delete:     (id)        => API.delete(`/projects/${id}`),
-    addMember:  (id, data)  => API.post(`/projects/${id}/add_member`, data),
+    addMember:  (id, data)  => API.post(`/projects/${id}/add_member/`, data),
 };
 
 // ─── Conversation APIs ────────────────────────────────────────────────────────
 
 const ConversationAPI = {
-    list:         (projectId) => API.get(`/conversations/conversations${projectId ? '?project_id='+projectId : ''}`),
+    list:         (projectId) => API.get(`/conversations/conversations/${projectId ? '?project_id='+projectId : ''}`),
     create:       (projectId, data) => API.post(`/conversations/conversations?project_id=${projectId}`, data),
     get:          (id)        => API.get(`/conversations/conversations/${id}`),
     messages:     (id)        => API.get(`/conversations/conversations/${id}/messages`),
@@ -136,7 +136,7 @@ const ConversationAPI = {
 // ─── Response APIs ────────────────────────────────────────────────────────────
 
 const ResponseAPI = {
-    list:   ()     => API.get('/conversations/responses'),
+    list:   ()     => API.get('/conversations/responses/'),
     get:    (id)   => API.get(`/conversations/responses/${id}`),
     submit: (data) => API.post('/conversations/responses', data),
     delete: (id)   => API.delete(`/conversations/responses/${id}`),
@@ -145,7 +145,7 @@ const ResponseAPI = {
 // ─── Moderation APIs ──────────────────────────────────────────────────────────
 
 const ModerationAPI = {
-    queue:    ()           => API.get('/moderation/queue'),
+    queue:    ()           => API.get('/moderation/queue/'),
     getItem:  (id)         => API.get(`/moderation/queue/${id}`),
     approve:  (id, data)   => API.post(`/moderation/queue/${id}/approve`, { decision: 'approved', ...data }),
     reject:   (id, data)   => API.post(`/moderation/queue/${id}/reject`,  { decision: 'rejected', ...data }),

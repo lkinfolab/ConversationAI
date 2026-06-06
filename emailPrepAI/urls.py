@@ -28,7 +28,6 @@ urlpatterns = [
     path('api/projects/', include('apps.projects.urls')),
     path('api/conversations/', include('apps.conversations.urls')),
     path('api/moderation/', include('apps.moderation.urls')),
-
     # Frontend (HTML pages)
     path('', include('apps.frontend.urls')),
 ]
